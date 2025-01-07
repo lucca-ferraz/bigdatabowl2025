@@ -45,7 +45,9 @@ plot_data |>
   geom_point(alpha = 0) +
   ggthemes::theme_clean() +
   geom_nfl_logos(aes(team_abbr = team_abbr, width = 0.075, height = 0.1)) +
-  labs(title = "Does having the tight end block aid in pass protection?",
-       subtitle = "TE Block Rate on pass plays vs Pressure Rate Allowed",
-       y = "% of plays where the tight end blocked",
-       x = "pressure rate allowed")
+  scale_x_continuous(labels = scales::percent) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Does Having the Tight End Block Aid in Pass Protection?",
+       subtitle = "TE Block Rate on Pass Plays vs Pressure Rate Allowed",
+       y = "% of Plays Where the Tight End Blocked",
+       x = "Pressure Rate Allowed")

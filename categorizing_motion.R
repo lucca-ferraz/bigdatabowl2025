@@ -1,4 +1,4 @@
-# get ids for all plays with motion
+# get ids for all plays with presnap movement
 motion_ids <- player_play |> 
   filter(motion_since_lineset == TRUE) |> 
   mutate(all_ids = paste(game_id, play_id, nfl_id),
@@ -80,10 +80,11 @@ qb_per_play <- player_play |>
 
 qb_tracking <- tracking |> 
   inner_join(qb_per_play) |> 
-  left_join(plays |> select(game_play_id, absolute_yardline_number)) |> 
-  mutate(x_los = 120 - absolute_yardline_number,
+  left_join(play_context |> select(game_play_id, yardline_100)) |> 
+  mutate(x_los = 100 - yardline_100,
          y_qb = y) |> 
   select(game_play_id, frame_id, x_los, y_qb)
+
 
 motion_features <- tagged_motion |> 
   select(game_play_id, all_ids, frame_line_set, frame_motion, frame_snap) |> 
@@ -101,6 +102,7 @@ motion_features <- tagged_motion |>
   unnest(cols = contains("_")) |> 
   mutate(x_center_before_snap = x_los_motion, 
          y_center_before_snap = y_qb_line_set, 
+         x_change_start = abs(x_motion - x_center_before_snap),
          y_change_start = abs(y_motion - y_center_before_snap),
          x_change_snap = abs(x_snap - x_center_before_snap),
          y_change_snap = abs(y_snap - y_center_before_snap)) |> 
@@ -135,3 +137,24 @@ motion_clusters |>
   geom_path(alpha = 0.3) + 
   facet_wrap(~ cluster) +
   labs(x = "along the sideline", y = "yardline")
+
+motion_labels <- tagged_motion |> 
+  left_join(motion_clusters |> select(game_play_id, 
+                                      frame_motion = frame_id_motion, cluster)) |> 
+  distinct() |> 
+  group_by(all_ids) |> 
+  summarise(cluster = first(cluster)) |> 
+  ungroup() |> 
+  mutate(game_play_id = word(all_ids, 1, 2, sep = " "),
+         player_in_motion = word(all_ids, 3, sep = " "))
+
+motion_per_play <- motion_labels |> 
+  group_by(game_play_id) |> 
+  summarise(motion_one = sum(cluster == 1),
+            motion_two = sum(cluster == 2),
+            motion_three = sum(cluster == 3),
+            motion_four = sum(cluster == 4),
+            motion_five = sum(cluster == 5),
+            motion_six = sum(cluster == 6))
+
+write_csv(motion_per_play, "updated_motion_labels.csv")
